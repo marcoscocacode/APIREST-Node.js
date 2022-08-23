@@ -1,0 +1,24 @@
+{
+  "name": "apirest-node",
+  "version": "1.0.0",
+  "description": "Adiciona estudos sobre consumo de API REST em Node.js",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon, src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcoscocacode/APIREST-Node.js.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/marcoscocacode/APIREST-Node.js/issues"
+  },
+  "homepage": "https://github.com/marcoscocacode/APIREST-Node.js#readme",
+  "devDependencies": {
+    "nodemon": "^2.0.19"
+  }
+}
