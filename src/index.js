@@ -1,165 +1,85 @@
-const http = require('http')
+const express = require ('express')
+const {TodosRepository, TodosRepository} = require('./todos/repository')
 
-const wait = (time) =>
-    new Promise(resolve =>
-        setTimeout(resolve, time)
-    )
+const app = express()
+app.use(express.json())
 
-const todosDatabase = (() => {
-let idSequence = 1
-const todos = {}
+// GET /hello
+app.get('/hello', (req, res) => {
+    res.status(200).send('Hello World!')
+})
 
-const insert = async (todo) => {
-    await wait(500)
-    const id = idSequence++
-    const data = { ...todo, id }
-    todos[id] = data
-    return data
+// GET /hello/:name
+app.get('/hello/:name', (req, res) => {
+    const name = req.params.name
+    res.status(200).send(`Hello ${name}!`)
+})
+
+// Todos
+const todosRepository = TodosRepository()
+
+const notFound = {
+    error: 'Not Found',
+    message: 'Resource not found'
 }
 
-const list = async () => {
-    await wait(100)
-    return Object.values(todos)
-}
-
-const get = async (id) => {
-    await wait(100)
-    return todos[id]
-}
-
-const update = async (todo) => {
-    await wait(500)
-    todos[todo.id] = todo
-    return todo
-}
-
-const del = async (id) => {
-    await wait(500)
-    delete todos[id]
-}
-
-return {
-    insert,
-    list,
-    get,
-    update,
-    del,
-    }
-})()
-
-const JsonHeader = { 'Content-Type': 'aplication/json'}
-
-const server = http.createServer((request, response) => {
-    
-    // GET /hello/:name -> Hello ${name}!
-    if (request.method === 'GET' && /^\/hello\/\w+$/.test(request.url)) {
-        const [, , name] = request.url.split('/')
-        response.writeHead(200)
-        response.end(`Hello ${name}!\n`)
+// GET /todos/:id
+app.get('/todos/:id', async (req, res) => {
+    const id = parseInt(req.params.id)
+    const todo = await todosRepository.get(id)
+    if (!todo) {
+        res.status(404).send(notFound)
         return
     }
-    // GET /hello -> Hello World
-    if (request.method === 'GET' && request.url.startsWith('/hello')){
-        response.writeHead(200)
-        response.end('Hello World\n')
+    res.status(200).send(todo)
+})
+
+// POST /todos
+app.post('/todos', async (req, res) => {
+    const todo = req.body
+    const inserted = await todosRepository.insert(todo)
+    res
+        .status(201)
+        .header("Location", `/todos/${inserted.id}`)
+        .send(inserted)
+})
+
+// PUT /todos
+app.put("/todos/:id", async (req, res) => {
+    const id = parseInt(req.params.id)
+    const todo = {...req.body, id}
+    const found = await todosRepository.get(id)
+    if (!found) {
+        res.status(404).send(notFound)
         return
     }
+    const updated = await todosRepository.update(todo)
+    res.status(200).send(updated)
+})
 
-    // POST /echo
-    if(request.method === 'POST' && request.url.startsWith('/echo')) {
-        response.writeHead(200)
-        request.pipe(response)
+// DEL /todos
+app.delete("/todos/:id", async (req, res) => {
+    const id = parseInt(req.params.id)
+    const found = await todosRepository.get(id)
+    if (!found) {
+        res.status(404).send(notFound)
         return
     }
+    await todosRepository.del(id)
+    res.status(204).send()
+})
 
-    // API 'TODOS' 
-    // POST /todos {"text": "string", "title": "string"}
-    if (request.method === 'POST' && request.url.startsWith('/todos')){
-        let bodyRaw = ''
-
-        request.on('data', data => bodyRaw += data)
-
-        request.once('end', () => {
-            const todo = JSON.parse(bodyRaw)
-            todosDatabase.insert(todo)
-                .then(inserted => {
-                    response.writeHead(201, JsonHeader)
-                    response.end(JSON.stringify(inserted))
-                })
-        })
-
-        return
-
-    }
-
-    // GET /todos
-    if (request.method === "GET" && request.url.startsWith('/todos')){
-        todosDatabase
+// GET /todos
+app.get("/todos", (_req, res) => {
+    todosRepository
         .list()
-        .then(todos => {
-            response.writeHead(200, JsonHeader)
-            response.end(JSON.stringify({ todos })) 
-        })
-    return
-    }
-
-    // GET /todos/:id
-    if (request.method === 'GET' && /^\/todos\/d+$/.test(request.url)){
-        const [, , idRaw] = request.url.split('/')
-        const id = parseInt(idRaw)
-
-        todosDatabase
-            .get(id)
-            .then(todo => {
-                if (!todo) {
-                    response.writeHead(404, JsonHeader)
-                    response.end({ message: 'Resource not found' })
-                } else {
-                    response.writeHead(200, JsonHeader)
-                    response.end(todo)
-                }
-            })
-        return
-    }
-
-    // DELETE /todos/:id
-    if (request.method === 'DELETE' && /^\/todos\/d+$/.test(request.url)) {
-        const [, , idRaw] = request.url.split('/')
-        const id = parseInt(idRaw)
-
-        todosDatabase
-            .del(id)
-            .then(() => {
-                response.writeHead(204)
-                response.end()
-            })
-        return
-    }
-
-    // PUT /todos/:id { "title", "text" }
-    if (request.method === 'PUT' && /^\/todos\/d+$/.test(request.url)) {
-        const [, , idRaw] = request.url.split('/')
-        const id = parseInt(idRaw)
-
-        request.on('data', data => bodyRaw += data)
-
-        request.once('end', () => {
-            const todo = { ...JSON.parse(bodyRaw), id }
-
-            todosDatabase.update(todo)
-                .then(updated => {
-                    response.writeHead(200, JsonHeader)
-                    response.end(JSON.stringify(updated))
-                })
-        })
-    return
-    }
-
-    response.writeHead(404)
-    response.end('Resource not found')
-
+        .then(todos => res.status(200).send({ todos }))
 })
 
-server.listen(3000, '0.0.0.0', () => {
-    console.log('Server Started')
+app.listen(3000, '0.0.0.0', () => {
+    console.log('Server started')
 })
+    .once('error', (error) => {
+        console.error(error)
+        process.exit(1)
+    })
