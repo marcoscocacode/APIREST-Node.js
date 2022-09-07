@@ -54,8 +54,8 @@ const UpdateUserSchema = {
     }),
     body: Joi.object({
         password: Joi.string().min(10).max(40),
-        firstName: Joi.string().regex(NameRegex).required(),
-        lastName: Joi.string().regex(NameRegex).required(),
+        firstName: Joi.string().regex(NameRegex),
+        lastName: Joi.string().regex(NameRegex),
     }).or('password', 'fistName', 'lastName'),
 }
 

@@ -1,6 +1,6 @@
 const { knex:Knex } = require('knex')
 
-const { database:config } = require('../../config/index.js')
+const { database : config } = require('../../config')
 const { NotFoundError, ConflictError } = require('../../errors')
 
 const encodeUser = ({
@@ -43,7 +43,7 @@ const handleUniqueUsernameError = username => error =>
     )
 
 const SQLRepository = () => {
-    const knex = Knex({ config })
+    const knex = Knex(config)
 
     const list = () =>
         knex
@@ -74,7 +74,7 @@ const SQLRepository = () => {
                 .update(encodeUser(user))
                 .then(() => get(user.id, tx))
         )
-        
+
     const del = id =>
         knex('users')
             .where({id})
