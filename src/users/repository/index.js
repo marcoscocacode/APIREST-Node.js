@@ -1,5 +1,5 @@
-const { InMemoryUsersRepository } = require('./in-memory')
+const { SQLRepository } = require('./sql-repository')
 
 module.exports = {
-    UsersRepository: InMemoryUsersRepository,
+    UsersRepository: SQLRepository,
 }
